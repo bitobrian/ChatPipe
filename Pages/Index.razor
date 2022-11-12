@@ -1,0 +1,59 @@
+﻿@page "/"
+
+<div>
+  @foreach(var chatMessage in chatLog
+    .Skip(chatLog.Count - 20)
+    .OrderByDescending(x => x.Key))
+  {
+    @chatMessage.Value
+    <br/>
+  }  
+</div>
+
+@code 
+{
+    Random random = new();
+    Dictionary<int, string> chatLog = new();
+    PeriodicTimer timer = new(TimeSpan.FromSeconds(2));
+    CancellationTokenSource cts = new();
+    int index = 0;
+    int skipCount = 0;
+
+    int GetRandomNumber(int max) => random.Next(max);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        for(var i = 0; i < 20; i++)
+        {
+            chatLog.Add(index, string.Empty);
+            index++;
+        }
+
+        Task.Run(()=> StartChat());
+    }
+
+    async Task StartChat()
+    {
+        var cancelToken = cts.Token;
+
+        while(!cts.IsCancellationRequested)
+        {
+            await timer.WaitForNextTickAsync(cancelToken);
+
+            chatLog.Add(index, "User_"+ GetRandomNumber(50000) +": Hey this number is " + GetRandomNumber(100) + ".");
+
+            index++;
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    Task StopChat()
+    {
+        cts.Cancel();
+
+        return Task.CompletedTask;
+    }
+}
